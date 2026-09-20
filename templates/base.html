@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}SGBIT Attendance{% endblock %}</title>
+  <meta name="description" content="SGBIT CSE Department — Intelligent Face Recognition Attendance Management System">
+  <link rel="shortcut icon" href="https://sgbit.edu.in/uploads/setting/logo_1773409861.png" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <img src="https://sgbit.edu.in/uploads/setting/logo_1773409861.png"
+         alt="SGBIT Logo" class="brand-logo">
+    <div class="brand-text">
+      <span class="brand-title">SGBIT</span>
+      <span class="brand-sub">CSE · Belagavi · VTU</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+
+    {# ── Student Portal ─────────────────────────────── #}
+    {% if session.role == 'student' %}
+      <div class="nav-section-label">My Portal</div>
+      <a href="{{ url_for('student_dashboard') }}"
+         class="nav-item {% if request.endpoint == 'student_dashboard' %}active{% endif %}">
+        <span class="nav-icon">🏠</span> My Dashboard
+      </a>
+    {% endif %}
+
+    {# ── Faculty ────────────────────────────── #}
+    {% if session.role == 'faculty' %}
+      <div class="nav-section-label">Main</div>
+      <a href="{{ url_for('dashboard') }}"
+         class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+
+      <div class="nav-section-label">Students</div>
+      <a href="{{ url_for('students_list') }}"
+         class="nav-item {% if request.endpoint == 'students_list' %}active{% endif %}">
+        <span class="nav-icon">👥</span> All Students
+      </a>
+
+      <div class="nav-section-label">Attendance</div>
+      <a href="{{ url_for('take_attendance') }}"
+         class="nav-item {% if request.endpoint == 'take_attendance' %}active{% endif %}">
+        <span class="nav-icon">📷</span> Entrance Camera
+      </a>
+      <a href="{{ url_for('attendance_report') }}"
+         class="nav-item {% if request.endpoint == 'attendance_report' %}active{% endif %}">
+        <span class="nav-icon">📋</span> Reports
+      </a>
+      <a href="{{ url_for('eligibility') }}"
+         class="nav-item {% if request.endpoint == 'eligibility' %}active{% endif %}">
+        <span class="nav-icon">✅</span> Eligibility
+      </a>
+
+      <div class="nav-section-label">Academics</div>
+      <a href="{{ url_for('marks') }}"
+         class="nav-item {% if request.endpoint == 'marks' %}active{% endif %}">
+        <span class="nav-icon">📝</span> IA Marks
+      </a>
+      <a href="{{ url_for('subjects') }}"
+         class="nav-item {% if request.endpoint == 'subjects' %}active{% endif %}">
+        <span class="nav-icon">📚</span> Subjects
+      </a>
+
+      <div class="nav-section-label">Notifications</div>
+      <a href="{{ url_for('email_logs') }}"
+         class="nav-item {% if request.endpoint == 'email_logs' %}active{% endif %}">
+        <span class="nav-icon">📧</span> Email Logs
+      </a>
+    {% endif %}
+
+    {# ── Admin only ─────────────────────────────────── #}
+    {% if session.role == 'admin' %}
+      <div class="nav-section-label">Administration</div>
+      <a href="{{ url_for('admin_users') }}"
+         class="nav-item {% if request.endpoint == 'admin_users' %}active{% endif %}">
+        <span class="nav-icon">🛡️</span> User Management
+      </a>
+    {% endif %}
+
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="faculty-badge">
+      <div class="faculty-avatar">{{ session.name[0]|upper if session.name else '?' }}</div>
+      <div class="faculty-info">
+        <span class="faculty-name">{{ session.name or 'User' }}</span>
+        <span class="faculty-role">
+          {% if session.role == 'admin' %}Administrator
+          {% elif session.role == 'faculty' %}Faculty Member
+          {% elif session.role == 'student' %}Student · {{ session.usn }}
+          {% endif %}
+        </span>
+      </div>
+    </div>
+    <a href="{{ url_for('logout') }}" class="logout-btn">
+      <span>⏏</span> Sign Out
+    </a>
+  </div>
+</aside>
+
+<!-- ── Main Content ──────────────────────────────────────────────────── -->
+<main class="main-content">
+  <header class="topbar">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebar-toggle">☰</button>
+    <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+    <div class="topbar-right">
+      <span class="topbar-college">S.G. Balekundri Institute of Technology</span>
+      <span class="topbar-date" id="live-clock"></span>
+    </div>
+  </header>
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">
+            <span>{{ message }}</span>
+            <button onclick="this.parentElement.remove()" class="flash-close" aria-label="Close">×</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="page-body">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

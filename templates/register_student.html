@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% block title %}Register Student — SGBIT{% endblock %}
+{% block page_title %}➕ Register New Student{% endblock %}
+
+{% block content %}
+<div class="reg-grid">
+
+  <!-- ── Webcam Preview ─────────────────────────────────────────────── -->
+  <div class="card webcam-card">
+    <div class="card-header">📷 Face Capture</div>
+    <div class="webcam-wrapper">
+      <video id="reg-video" class="webcam-img" autoplay muted playsinline style="transform: scaleX(-1);"></video>
+      <canvas id="reg-canvas" style="display:none"></canvas>
+      <div class="capture-overlay" id="cap-status">
+        <div class="cap-icon">📷</div>
+        <p>Camera will start when you click "Start Camera"</p>
+      </div>
+    </div>
+    <div class="capture-controls">
+      <button id="start-cam-btn" class="btn btn-secondary" onclick="startCamera()">
+        📷 Start Camera
+      </button>
+      <button id="capture-btn" class="btn btn-primary" onclick="captureFrames()" disabled>
+        ⏺ Start Capture (75 frames)
+      </button>
+    </div>
+
+    <!-- Guided pose overlay -->
+    <div id="pose-overlay" style="display:none; text-align:center; margin-top:10px; position:relative;">
+      <button id="voice-toggle" onclick="toggleVoice()"
+        style="position:absolute;right:12px;top:0;background:rgba(224,169,8,.1);
+               border:1px solid rgba(224,169,8,.3);border-radius:6px;
+               color:#e0a908;font-size:0.8rem;padding:4px 10px;cursor:pointer;
+               display:flex;align-items:center;gap:4px">
+        🔊 <span id="voice-label">Voice On</span>
+      </button>
+      <div id="pose-arrow" style="font-size:3rem; line-height:1; transition:all 0.4s ease;">😐</div>
+      <div id="pose-instruction" style="
+        font-size:1rem; font-weight:600; margin-top:6px;
+        background: linear-gradient(90deg,#e0a908,#f0c040);
+        -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+        letter-spacing:.5px;
+      ">Look straight at the camera</div>
+      <div id="phase-indicator" style="display:flex; justify-content:center; gap:8px; margin-top:8px;">
+        <span class="phase-dot active" title="Straight">●</span>
+        <span class="phase-dot" title="Left">●</span>
+        <span class="phase-dot" title="Right">●</span>
+        <span class="phase-dot" title="Up">●</span>
+        <span class="phase-dot" title="Down">●</span>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-wrap" id="progress-wrap" style="display:none">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-label" id="prog-label">0 / 75 frames captured</div>
+    </div>
+    <div id="capture-done" class="capture-done hidden">
+      ✅ Face data captured! Fill in details and submit.
+    </div>
+  </div>
+
+  <!-- ── Registration Form ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">🎓 Student Details</div>
+    <form id="reg-form" onsubmit="submitRegistration(event)">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" name="name" class="form-input" id="reg-name"
+                 placeholder="e.g. Imran Khan" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">USN *</label>
+          <input type="text" name="usn" class="form-input" id="reg-usn"
+                 placeholder="e.g. 2CS21CS001"
+                 style="text-transform:uppercase" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Semester</label>
+          <select name="semester" class="form-select" id="reg-semester">
+            {% for s in range(1, 9) %}
+            <option value="{{ s }}" {% if s==5 %}selected{% endif %}>Semester {{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Section</label>
+          <select name="section" class="form-select" id="reg-section">
+            <option>A</option><option>B</option><option>C</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Parent / Guardian Email *</label>
+        <input type="email" name="parent_email" class="form-input" id="reg-email"
+               placeholder="parent@email.com" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input type="tel" name="phone" class="form-input" id="reg-phone"
+               placeholder="9XXXXXXXXX">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Initial Login Password *
+          <span style="font-size:.75rem;color:var(--text-muted);font-weight:400">
+            (Student uses this to log in to the portal)
+          </span>
+        </label>
+        <input type="password" class="form-input" id="reg-password"
+               placeholder="Min 6 characters" minlength="6" required>
+      </div>
+
+      <div id="reg-msg" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:.9rem;"></div>
+
+      <button type="submit" class="btn btn-primary btn-full" id="reg-submit">
+        🚀 Register Student
+      </button>
+    </form>
+  </div>
+
+</div>
+
+<style>
+.reg-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 800px) { .reg-grid { grid-template-columns: 1fr; } }
+.phase-dot {
+  font-size: 0.55rem;
+  color: var(--text-light);
+  transition: color 0.3s, text-shadow 0.3s;
+  cursor: default;
+}
+.phase-dot.active { color: #e0a908; text-shadow: 0 0 8px #e0a908; }
+.phase-dot.done   { color: #22c55e; text-shadow: 0 0 6px #22c55e; }
+@keyframes pulsePose { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+#pose-arrow { display:inline-block; }
+#pose-arrow.animate { animation: pulsePose 0.6s ease; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let camStream = null, capturing = false, capturedFrames = [];
+
+const PHASES = [
+  { label:'Look straight', spoken:'Look straight at the camera', icon:'😐', frames:20, delay:180 },
+  { label:'Turn left ←',  spoken:'Turn your head to the left',  icon:'⬅️', frames:15, delay:220 },
+  { label:'Turn right →', spoken:'Turn your head to the right', icon:'➡️', frames:15, delay:220 },
+  { label:'Tilt up ↑',    spoken:'Tilt your head up',           icon:'⬆️', frames:13, delay:220 },
+  { label:'Tilt down ↓',  spoken:'Tilt your head down',         icon:'⬇️', frames:12, delay:220 },
+];
+
+let _voiceEnabled = true;
+function speak(text) {
+  if (!_voiceEnabled || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang='en-US'; utt.rate=0.88; utt.pitch=1.05;
+  const voices = window.speechSynthesis.getVoices();
+  const female = voices.find(v=>v.lang.startsWith('en')&&
+    (v.name.includes('Female')||v.name.includes('Zira')||
+     v.name.includes('Google UK English Female')||v.name.includes('Samantha')));
+  if (female) utt.voice = female;
+  window.speechSynthesis.speak(utt);
+}
+function toggleVoice() {
+  _voiceEnabled = !_voiceEnabled;
+  const btn = document.getElementById('voice-toggle');
+  btn.style.background   = _voiceEnabled ? 'rgba(224,169,8,.1)'  : 'rgba(239,68,68,.1)';
+  btn.style.borderColor  = _voiceEnabled ? 'rgba(224,169,8,.3)'  : 'rgba(239,68,68,.35)';
+  btn.style.color        = _voiceEnabled ? '#e0a908' : '#f87171';
+  document.getElementById('voice-label').textContent = _voiceEnabled ? 'Voice On' : 'Voice Off';
+  btn.querySelector('span').previousSibling.textContent = _voiceEnabled ? '🔊 ' : '🔇 ';
+  if (!_voiceEnabled) window.speechSynthesis.cancel();
+}
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = ()=>window.speechSynthesis.getVoices();
+}
+
+async function startCamera() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'}});
+    document.getElementById('reg-video').srcObject = camStream;
+    document.getElementById('cap-status').style.display = 'none';
+    document.getElementById('start-cam-btn').disabled = true;
+    document.getElementById('capture-btn').disabled   = false;
+  } catch(e) { alert('Camera access denied: '+e.message); }
+}
+
+async function captureFrames() {
+  if (capturing) return;
+  capturing=true; capturedFrames=[];
+  const video=document.getElementById('reg-video'), canvas=document.getElementById('reg-canvas');
+  canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480;
+  const ctx=canvas.getContext('2d'), TOTAL=PHASES.reduce((s,p)=>s+p.frames,0);
+  document.getElementById('progress-wrap').style.display='block';
+  document.getElementById('pose-overlay').style.display='block';
+  document.getElementById('capture-btn').disabled=true;
+  const dots=document.querySelectorAll('.phase-dot');
+  let globalIdx=0;
+  for (let pi=0;pi<PHASES.length;pi++) {
+    const phase=PHASES[pi];
+    const arrowEl=document.getElementById('pose-arrow');
+    arrowEl.classList.remove('animate'); void arrowEl.offsetWidth; arrowEl.classList.add('animate');
+    arrowEl.textContent=phase.icon;
+    document.getElementById('pose-instruction').textContent=phase.label;
+    speak(phase.spoken);
+    dots.forEach((d,i)=>{d.classList.remove('active','done');if(i<pi)d.classList.add('done');if(i===pi)d.classList.add('active');});
+    await new Promise(r=>setTimeout(r,700));
+    for (let fi=0;fi<phase.frames;fi++) {
+      ctx.save(); ctx.translate(canvas.width,0); ctx.scale(-1,1); ctx.drawImage(video,0,0); ctx.restore();
+      capturedFrames.push(canvas.toDataURL('image/jpeg',0.85)); globalIdx++;
+      const pct=Math.round((globalIdx/TOTAL)*100);
+      document.getElementById('prog-fill').style.width=pct+'%';
+      document.getElementById('prog-label').textContent=`${globalIdx}/${TOTAL} frames — Phase ${pi+1}/${PHASES.length}: ${phase.label}`;
+      await new Promise(r=>setTimeout(r,phase.delay));
+    }
+  }
+  dots.forEach(d=>{d.classList.remove('active');d.classList.add('done');});
+  document.getElementById('pose-arrow').textContent='✅';
+  document.getElementById('pose-instruction').textContent='All poses captured!';
+  speak('All poses captured. Please fill in the form and submit.');
+  if (camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  document.getElementById('capture-done').classList.remove('hidden');
+  capturing=false;
+}
+
+async function submitRegistration(e) {
+  e.preventDefault();
+  if (capturedFrames.length<5){showMsg('❌ Please capture face frames first.','danger');return;}
+  const btn=document.getElementById('reg-submit');
+  btn.disabled=true; btn.textContent='⏳ Processing…';
+  const payload={
+    name:document.getElementById('reg-name').value.trim(),
+    usn:document.getElementById('reg-usn').value.trim().toUpperCase(),
+    semester:document.getElementById('reg-semester').value,
+    section:document.getElementById('reg-section').value,
+    parent_email:document.getElementById('reg-email').value.trim(),
+    phone:document.getElementById('reg-phone').value.trim(),
+    password:document.getElementById('reg-password').value,
+    frames:capturedFrames
+  };
+  try {
+    const res=await fetch('/api/register_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if (data.ok){showMsg('✅ '+data.message,'success');setTimeout(()=>{window.location.href='/students';},1500);}
+    else{
+      showMsg('❌ '+data.error+' — Click "Start Capture" to retry.','danger');
+      btn.disabled=false; btn.textContent='🚀 Register Student';
+      resetCapture();
+    }
+  } catch(err){showMsg('❌ Network error: '+err.message,'danger');btn.disabled=false;btn.textContent='🚀 Register Student';}
+}
+
+function resetCapture() {
+  capturedFrames = []; capturing = false;
+  // Reset progress UI
+  document.getElementById('progress-wrap').style.display = 'none';
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('prog-label').textContent = '0 / 75 frames captured';
+  document.getElementById('pose-overlay').style.display = 'none';
+  document.getElementById('capture-done').classList.add('hidden');
+  // Reset phase dots
+  document.querySelectorAll('.phase-dot').forEach((d,i)=>{
+    d.classList.remove('active','done'); if(i===0) d.classList.add('active');
+  });
+  // Restart camera and re-enable capture button
+  startCamera();
+}
+
+function showMsg(text,type) {
+  const el=document.getElementById('reg-msg');
+  el.style.display='block'; el.textContent=text;
+  el.style.background=type==='success'?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)';
+  el.style.color=type==='success'?'#22c55e':'#ef4444';
+  el.style.border=`1px solid ${type==='success'?'#22c55e':'#ef4444'}`;
+}
+</script>
+{% endblock %}

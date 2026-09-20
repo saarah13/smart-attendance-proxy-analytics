@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+{% block title %}Entrance Camera — SGBIT{% endblock %}
+{% block page_title %}📷 Entrance Camera — Auto Attendance{% endblock %}
+
+{% block content %}
+<div class="attend-grid">
+
+  <!-- ── Live Camera Feed ──────────────────────────────────────── -->
+  <div class="card webcam-card">
+    <div class="card-header">
+      Live Entrance Camera
+      <span class="live-badge" id="live-badge" style="display:none">● LIVE</span>
+      <span id="scan-pulse" style="display:none;margin-left:8px;font-size:0.75rem;
+            color:#22c55e;animation:blink 1.2s infinite">⬤ Scanning</span>
+    </div>
+    <div class="webcam-wrapper">
+      <img id="webcam-feed" alt="Live Camera" class="webcam-img" style="display:none">
+      <div class="webcam-overlay" id="cam-status"
+           style="display:flex;align-items:center;justify-content:center">
+        <div style="text-align:center;padding:20px">
+          <div style="font-size:2.5rem;margin-bottom:8px">🚪</div>
+          <div>Start a session to begin auto-marking attendance</div>
+        </div>
+      </div>
+    </div>
+    <!-- Session counter bar -->
+    <div id="session-counter" style="display:none;padding:10px 16px;
+         background:rgba(34,197,94,0.1);border-top:1px solid rgba(34,197,94,0.2);
+         display:flex;align-items:center;gap:12px">
+      <span style="font-size:1.5rem;font-weight:700;color:#22c55e" id="marked-count">0</span>
+      <span style="color:var(--text-muted);font-size:0.85rem">students marked present</span>
+    </div>
+  </div>
+
+  <!-- ── Controls + Live Log ───────────────────────────────────── -->
+  <div class="attend-controls">
+
+    <!-- Session Setup -->
+    <div class="card">
+      <div class="card-header">📚 Session Setup</div>
+      <div class="form-group">
+        <label class="form-label" for="subject-select">Select Subject</label>
+        <select id="subject-select" class="form-select">
+          <option value="">— Choose Subject —</option>
+          {% for s in subjects %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- ── Camera Source ──────────────────────────────────────── -->
+      <div class="form-group" style="margin-top:12px">
+        <label class="form-label" style="margin-bottom:6px">📷 Camera Source</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button type="button" id="cam-local-btn"
+            onclick="setCamMode('local')"
+            style="flex:1;padding:7px 10px;font-size:0.82rem;border-radius:8px;
+                   border:2px solid var(--navy);background:var(--navy);color:#fff;
+                   cursor:pointer;transition:all .2s">
+            💻 Local Webcam
+          </button>
+          <button type="button" id="cam-ip-btn"
+            onclick="setCamMode('ip')"
+            style="flex:1;padding:7px 10px;font-size:0.82rem;border-radius:8px;
+                   border:2px solid var(--border);background:transparent;
+                   color:var(--text-muted);cursor:pointer;transition:all .2s">
+            📱 Phone (IP Webcam)
+          </button>
+        </div>
+        <!-- IP Webcam URL input (hidden by default) -->
+        <div id="ip-cam-input" style="display:none">
+          <input id="ip-cam-url" type="text" class="form-select"
+            placeholder="http://192.168.1.8:8080/video"
+            style="width:100%;padding:8px 10px;font-size:0.85rem"
+            value="">
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px">
+            📶 Phone & PC must be on the same Wi-Fi. Open IP Webcam app → Start server.
+          </div>
+        </div>
+      </div>
+
+      <div class="attend-btns" style="gap:8px">
+        <button id="start-btn" class="btn btn-primary" onclick="startSession()" style="flex:1">
+          ▶ Start Session
+        </button>
+        <button id="stop-btn" class="btn btn-danger" onclick="stopSession()" disabled style="flex:1">
+          ⏹ End Session
+        </button>
+      </div>
+
+      <!-- ── Auto-End Timer Setup ──────────────────────────────── -->
+      <div id="auto-end-setup" style="margin-top:14px">
+        <label class="form-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          ⏱ Auto-End Timer
+          <span style="font-size:0.73rem;opacity:.55;font-weight:400">(optional)</span>
+        </label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="auto-end-minutes" type="number" min="1" max="180" placeholder="Minutes"
+            class="form-select" style="flex:1;padding:7px 10px;font-size:0.88rem">
+          <select id="auto-end-seconds" class="form-select" style="flex:1;padding:7px 10px;font-size:0.88rem">
+            <option value="0">00 sec</option>
+            <option value="30">30 sec</option>
+          </select>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:5px">
+          Leave blank to run session manually.
+        </div>
+      </div>
+
+      <!-- ── Live Countdown (shown during session) ──────────────── -->
+      <div id="auto-end-countdown" style="display:none;margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:0.8rem;color:var(--text-muted)">⏱ Auto-ending in</span>
+          <span id="countdown-label" style="font-size:1.1rem;font-weight:700;color:#f59e0b;letter-spacing:1px">--:--</span>
+        </div>
+        <div style="height:6px;border-radius:99px;background:var(--bg-muted);overflow:hidden">
+          <div id="countdown-bar"
+               style="height:100%;width:100%;border-radius:99px;
+                      background:linear-gradient(90deg,#f59e0b,#ef4444);
+                      transition:width 1s linear"></div>
+        </div>
+        <button onclick="cancelAutoEnd()" style="margin-top:8px;width:100%;padding:5px;
+          font-size:0.75rem;border:1px solid rgba(245,158,11,.3);border-radius:6px;
+          background:var(--amber-bg);color:var(--amber-text);cursor:pointer">
+          ✕ Cancel Auto-End
+        </button>
+      </div>
+
+      <div id="session-info" style="display:none;margin-top:12px;padding:8px 12px;
+           border-radius:8px;background:var(--blue-bg);border:1px solid var(--blue-border);
+           font-size:0.82rem;color:var(--blue-text)">
+        📌 Session: <span id="session-id-label">—</span>
+      </div>
+    </div>
+
+    <!-- Live Entry Log -->
+    <div class="card" style="flex:1">
+      <div class="card-header">
+        🚶 Live Entry Log
+        <span id="face-count" class="badge badge-blue">0</span>
+      </div>
+      <div id="entry-log" style="
+        max-height:320px;overflow-y:auto;padding:8px 0;">
+        <div class="empty-state-sm" id="log-empty">
+          Waiting for students to walk in…
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Summary -->
+    <div class="card" id="summary-card" style="display:none">
+      <div class="card-header">✅ Session Summary</div>
+      <div id="summary-list" style="padding:8px 0;max-height:200px;overflow-y:auto"></div>
+    </div>
+
+    <!-- Status Log -->
+    <div class="card">
+      <div class="card-header">📋 System Log</div>
+      <div id="session-log" class="session-log">
+        <div class="log-entry log-info">Ready. Select a subject and press Start Session.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.entry-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  animation: slideIn 0.3s ease;
+}
+@keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+.entry-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy), var(--navy-light));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 1rem; flex-shrink: 0; color: #fff;
+}
+.entry-info { flex: 1; }
+.entry-name { font-weight: 600; font-size: 0.9rem; }
+.entry-meta { font-size: 0.75rem; color: var(--text-muted); }
+.entry-pct  { font-size: 0.78rem; color: #22c55e; font-weight: 600; }
+.entry-time { font-size: 0.72rem; color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let _sessionRunning  = false;
+let _eventSource     = null;
+let _markedCount     = 0;
+let _markedStudents  = {};
+let _autoEndTimer    = null;
+let _autoEndTotal    = 0;
+let _autoEndRemaining = 0;
+let _camMode         = 'local';   // 'local' | 'ip'
+
+function setCamMode(mode) {
+  _camMode = mode;
+  const ipInput  = document.getElementById('ip-cam-input');
+  const localBtn = document.getElementById('cam-local-btn');
+  const ipBtn    = document.getElementById('cam-ip-btn');
+  if (mode === 'ip') {
+    ipInput.style.display  = '';
+    ipBtn.style.border     = '2px solid var(--navy)';
+    ipBtn.style.background = 'var(--navy)';
+    ipBtn.style.color      = '#fff';
+    localBtn.style.border     = '2px solid var(--border)';
+    localBtn.style.background = 'transparent';
+    localBtn.style.color      = 'var(--text-muted)';
+  } else {
+    ipInput.style.display  = 'none';
+    localBtn.style.border     = '2px solid var(--navy)';
+    localBtn.style.background = 'var(--navy)';
+    localBtn.style.color      = '#fff';
+    ipBtn.style.border     = '2px solid var(--border)';
+    ipBtn.style.background = 'transparent';
+    ipBtn.style.color      = 'var(--text-muted)';
+  }
+}
+
+async function startSession() {
+  const subject = document.getElementById('subject-select').value;
+  if (!subject) { alert('Please select a subject first.'); return; }
+
+  // Camera source
+  let cameraPayload = {};
+  if (_camMode === 'ip') {
+    const url = document.getElementById('ip-cam-url').value.trim();
+    if (!url) { alert('Please enter the IP Webcam URL (e.g. http://192.168.1.5:8080/video)'); return; }
+    cameraPayload = { camera_url: url };
+  } else {
+    cameraPayload = { camera_index: 0 };
+  }
+
+  // Start camera feed
+  const img = document.getElementById('webcam-feed');
+  img.src   = '{{ url_for("video_feed") }}?' + Date.now();
+  img.style.display = 'block';
+  document.getElementById('cam-status').style.display = 'none';
+  document.getElementById('live-badge').style.display = '';
+  document.getElementById('scan-pulse').style.display = '';
+
+  // Start backend session
+  try {
+    const res  = await fetch('/api/session/start', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ subject, ...cameraPayload })
+    });
+    const data = await res.json();
+    if (!data.ok) { log('error', '❌ ' + data.error); return; }
+
+    _sessionRunning = true;
+    _markedCount    = 0;
+    _markedStudents = {};
+    document.getElementById('marked-count').textContent = '0';
+    document.getElementById('session-counter').style.display = 'flex';
+    document.getElementById('session-info').style.display = '';
+    document.getElementById('session-id-label').textContent = data.session_id;
+    document.getElementById('start-btn').disabled = true;
+    document.getElementById('stop-btn').disabled  = false;
+    document.getElementById('subject-select').disabled = true;
+    document.getElementById('log-empty').style.display = 'none';
+    document.getElementById('summary-card').style.display = 'none';
+
+    log('success', `▶ Session started for "${subject}"`);
+    subscribeSSE();
+    startAutoEndTimer();
+  } catch(e) {
+    log('error', 'Network error: ' + e.message);
+  }
+}
+
+function startAutoEndTimer() {
+  const mins = parseInt(document.getElementById('auto-end-minutes').value) || 0;
+  const secs = parseInt(document.getElementById('auto-end-seconds').value) || 0;
+  const total = mins * 60 + secs;
+  if (total <= 0) return;   // no timer set
+
+  _autoEndTotal     = total;
+  _autoEndRemaining = total;
+
+  document.getElementById('auto-end-setup').style.display    = 'none';
+  document.getElementById('auto-end-countdown').style.display = '';
+  updateCountdownDisplay();
+
+  _autoEndTimer = setInterval(() => {
+    _autoEndRemaining--;
+    updateCountdownDisplay();
+    if (_autoEndRemaining <= 0) {
+      clearInterval(_autoEndTimer);
+      _autoEndTimer = null;
+      log('info', '⏱ Auto-end timer expired. Ending session…');
+      stopSession();
+    }
+  }, 1000);
+
+  log('info', `⏱ Auto-end set for ${mins}m ${secs}s`);
+}
+
+function updateCountdownDisplay() {
+  const r = Math.max(0, _autoEndRemaining);
+  const m = String(Math.floor(r / 60)).padStart(2, '0');
+  const s = String(r % 60).padStart(2, '0');
+  document.getElementById('countdown-label').textContent = `${m}:${s}`;
+  const pct = _autoEndTotal > 0 ? (r / _autoEndTotal) * 100 : 0;
+  document.getElementById('countdown-bar').style.width = pct + '%';
+  // Turn bar red when <= 30 s
+  if (r <= 30) {
+    document.getElementById('countdown-label').style.color = '#ef4444';
+    document.getElementById('countdown-bar').style.background = '#ef4444';
+  }
+}
+
+function cancelAutoEnd() {
+  if (_autoEndTimer) { clearInterval(_autoEndTimer); _autoEndTimer = null; }
+  document.getElementById('auto-end-countdown').style.display = 'none';
+  document.getElementById('auto-end-setup').style.display     = '';
+  log('info', '⏱ Auto-end timer cancelled.');
+}
+
+async function stopSession() {
+  document.getElementById('stop-btn').disabled = true;
+  if (_eventSource) { _eventSource.close(); _eventSource = null; }
+
+  try {
+    const res  = await fetch('/api/session/stop', { method: 'POST' });
+    const data = await res.json();
+    log('info', `⏹ Session ended. ${data.total_marked} student(s) marked.`);
+  } catch(e) { log('error', e.message); }
+
+  // Stop camera
+  const img = document.getElementById('webcam-feed');
+  img.src = ''; img.style.display = 'none';
+  document.getElementById('cam-status').style.display = 'flex';
+  document.getElementById('live-badge').style.display = 'none';
+  document.getElementById('scan-pulse').style.display = 'none';
+  document.getElementById('start-btn').disabled  = false;
+  document.getElementById('subject-select').disabled = false;
+  _sessionRunning = false;
+
+  // Reset auto-end timer UI
+  if (_autoEndTimer) { clearInterval(_autoEndTimer); _autoEndTimer = null; }
+  document.getElementById('auto-end-countdown').style.display = 'none';
+  document.getElementById('auto-end-setup').style.display     = '';
+  document.getElementById('auto-end-minutes').value = '';
+  document.getElementById('auto-end-seconds').value = '0';
+  document.getElementById('countdown-label').style.color = '#f59e0b';
+  document.getElementById('countdown-bar').style.background = 'linear-gradient(90deg,#f59e0b,#ef4444)';
+
+  // Show summary
+  showSummary();
+}
+
+function subscribeSSE() {
+  _eventSource = new EventSource('/api/session/events');
+  _eventSource.onmessage = (e) => {
+    const evt = JSON.parse(e.data);
+    if (evt.type === 'marked') {
+      addEntryRow(evt);
+    } else if (evt.type === 'stopped' || evt.type === 'done') {
+      _eventSource.close();
+    }
+  };
+  _eventSource.onerror = () => {
+    if (!_sessionRunning) _eventSource.close();
+  };
+}
+
+function addEntryRow(evt) {
+  if (_markedStudents[evt.usn]) return;
+  _markedStudents[evt.usn] = evt;
+  _markedCount++;
+  document.getElementById('marked-count').textContent = _markedCount;
+  document.getElementById('face-count').textContent   = _markedCount;
+
+  const container = document.getElementById('entry-log');
+  const row       = document.createElement('div');
+  row.className   = 'entry-row';
+  row.innerHTML   = `
+    <div class="entry-avatar">${evt.name[0].toUpperCase()}</div>
+    <div class="entry-info">
+      <div class="entry-name">${evt.name}</div>
+      <div class="entry-meta">${evt.usn}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="entry-pct">${evt.pct}% match</div>
+      <div class="entry-time">${evt.time}</div>
+    </div>
+  `;
+  container.prepend(row);
+  log('success', `✅ ${evt.name} (${evt.usn}) — ${evt.pct}% match`);
+}
+
+function showSummary() {
+  const card = document.getElementById('summary-card');
+  const list = document.getElementById('summary-list');
+  const students = Object.values(_markedStudents);
+  if (!students.length) return;
+  card.style.display = '';
+  list.innerHTML = students.map(s => `
+    <div style="display:flex;justify-content:space-between;
+         padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.06)">
+      <span>${s.name} <span style="opacity:.5;font-size:.78rem">${s.usn}</span></span>
+      <span style="color:#22c55e;font-size:.8rem">${s.time}</span>
+    </div>`).join('');
+}
+
+function log(type, msg) {
+  const el  = document.getElementById('session-log');
+  const div = document.createElement('div');
+  div.className   = `log-entry log-${type}`;
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.prepend(div);
+}
+
+// Auto-release camera when leaving page
+window.addEventListener('beforeunload', () => {
+  if (_sessionRunning) stopSession();
+});
+</script>
+{% endblock %}

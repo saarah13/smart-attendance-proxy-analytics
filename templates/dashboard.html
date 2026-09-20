@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — SGBIT Attendance{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+
+  <!-- ── Page Header ───────────────────────────────────────────────── -->
+  <div class="page-header" style="margin-bottom: 20px;">
+    <div>
+      <div class="page-header-title">Hello, {{ session.name.split()[0] if session.name else 'User' }} 👋</div>
+      <div class="page-header-sub">Here's what's happening today · {{ now }}</div>
+    </div>
+    <a href="{{ url_for('take_attendance') }}" class="btn btn-primary">
+      📷 Take Attendance
+    </a>
+  </div>
+
+  <!-- ── Stat Cards ─────────────────────────────────────────────────── -->
+  <div class="stats-row">
+    <div class="stat-card stat-blue">
+      <div class="stat-card-top">
+        <div>
+          <div class="stat-value">{{ stats.total_students }}</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-icon">👥</div>
+      </div>
+      <div class="stat-trend">{{ stats.registered }} registered in FAISS</div>
+    </div>
+
+    <div class="stat-card stat-green">
+      <div class="stat-card-top">
+        <div>
+          <div class="stat-value">{{ stats.today.pct }}%</div>
+          <div class="stat-label">Today's Attendance</div>
+        </div>
+        <div class="stat-icon">✅</div>
+      </div>
+      <div class="stat-trend">{{ stats.today.present }} present · {{ stats.today.absent }} absent</div>
+    </div>
+
+    <div class="stat-card stat-purple">
+      <div class="stat-card-top">
+        <div>
+          <div class="stat-value">{{ stats.subjects_count }}</div>
+          <div class="stat-label">Active Subjects</div>
+        </div>
+        <div class="stat-icon">📚</div>
+      </div>
+      <div class="stat-trend">This semester</div>
+    </div>
+
+    <div class="stat-card stat-amber">
+      <div class="stat-card-top">
+        <div>
+          <div class="stat-value">{{ stats.emails_sent }}</div>
+          <div class="stat-label">Alerts Sent</div>
+        </div>
+        <div class="stat-icon">📧</div>
+      </div>
+      <div class="stat-trend">Parent notifications</div>
+    </div>
+  </div>
+
+  <!-- ── Quick Actions ──────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">⚡ Quick Actions</div>
+    <div class="quick-actions">
+      <a href="{{ url_for('take_attendance') }}" class="qa-btn qa-primary">
+        <span>📷</span> Take Attendance
+      </a>
+      <a href="{{ url_for('eligibility') }}" class="qa-btn qa-success">
+        <span>✅</span> Check Eligibility
+      </a>
+      <a href="{{ url_for('marks') }}" class="qa-btn qa-info">
+        <span>📝</span> Enter IA Marks
+      </a>
+      <a href="{{ url_for('attendance_report') }}" class="qa-btn qa-secondary">
+        <span>📋</span> View Reports
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Recent Attendance ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      📋 Recent Attendance
+      <a href="{{ url_for('attendance_report') }}" class="card-link">View All →</a>
+    </div>
+    {% if recent %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th><th>USN</th><th>Name</th>
+            <th>Subject</th><th>Time</th><th>Status</th><th>Confidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recent %}
+          <tr>
+            <td style="color: var(--text-light); font-size: 0.8rem;">{{ loop.index }}</td>
+            <td><code>{{ r.usn }}</code></td>
+            <td style="font-weight: 500; color: var(--text);">{{ r.name }}</td>
+            <td>{{ r.subject }}</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;">{{ r.timestamp.strftime('%H:%M:%S') if r.timestamp else '—' }}</td>
+            <td>
+              <span class="badge {% if r.status == 'Present' %}badge-green{% else %}badge-red{% endif %}">
+                {{ r.status }}
+              </span>
+            </td>
+            <td style="color: var(--text-muted);">{{ '%.0f%%' % (r.confidence * 100) if r.confidence else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <p>No attendance records for today yet.</p>
+      <a href="{{ url_for('take_attendance') }}" class="btn btn-primary">Take Attendance Now</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh stats every 30 seconds
+setTimeout(() => location.reload(), 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Students — SGBIT{% endblock %}
+{% block page_title %}👥 Registered Students{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    All Students
+    <span class="badge badge-blue">{{ students | length }} registered</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table" id="students-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Photo</th><th>USN</th><th>Name</th>
+          <th>Semester</th><th>Section</th><th>Parent Email</th><th>Registered On</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>
+            {% if s.face_thumbnail %}
+            <img src="{{ url_for('static', filename=s.face_thumbnail) }}"
+                 class="student-thumb" alt="{{ s.name }}"
+                 onerror="this.src='https://ui-avatars.com/api/?name={{ s.name }}&background=1a237e&color=fff&size=48'">
+            {% else %}
+            <div class="avatar-placeholder">{{ s.name[0]|upper }}</div>
+            {% endif %}
+          </td>
+          <td><code>{{ s.usn }}</code></td>
+          <td>{{ s.name }}</td>
+          <td>Sem {{ s.semester }}</td>
+          <td>{{ s.section }}</td>
+          <td>{{ s.parent_email or '—' }}</td>
+          <td>{{ s.registered_at.strftime('%d %b %Y') if s.registered_at else '—' }}</td>
+          <td>
+            <button onclick="deleteStudent('{{ s.usn }}', '{{ s.name }}')" class="btn btn-sm" style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); padding: 4px 8px; font-size: 0.75rem;">
+              🗑️ Delete
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not students %}
+        <tr>
+          <td colspan="9" class="empty-cell">
+            No students registered yet.
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function deleteStudent(usn, name) {
+  if (!confirm(`Are you sure you want to delete ${name} (${usn})?\nThis action cannot be undone.`)) {
+    return;
+  }
+  
+  try {
+    const res = await fetch(`/api/delete_student/${usn}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      window.location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (err) {
+    alert('Network error while deleting student.');
+  }
+}
+
+// Client-side search
+const tableBody = document.querySelector('#students-table tbody');
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+    e.preventDefault();
+    document.getElementById('quick-search')?.focus();
+  }
+});
+</script>
+{% endblock %}

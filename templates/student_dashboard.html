@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard — SGBIT{% endblock %}
+{% block page_title %}My Dashboard{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  /* ── Hero Banner ───────────────────────────────────────────────── */
+  .student-hero {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+  .student-hero::before {
+    content: '';
+    position: absolute;
+    right: -40px; top: -40px;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+  }
+  .student-hero::after {
+    content: '';
+    position: absolute;
+    right: 60px; bottom: -60px;
+    width: 140px; height: 140px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 50%;
+  }
+  .hero-avatar {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 800;
+    color: var(--navy);
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    border: 3px solid rgba(255,255,255,0.2);
+  }
+  .hero-text { flex: 1; position: relative; z-index: 1; }
+  .hero-name { font-size: 1.4rem; font-weight: 800; color: #fff; font-family: 'Poppins', sans-serif; letter-spacing: -0.01em; }
+  .hero-usn  { font-size: .85rem; color: rgba(255,255,255,.65); margin-top: 4px; }
+  .hero-date { font-size: .78rem; color: rgba(255,255,255,.45); margin-top: 3px; }
+  .hero-stats {
+    display: flex; gap: 20px; position: relative; z-index: 1;
+  }
+  .hero-stat {
+    text-align: center;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    padding: 12px 20px;
+    min-width: 80px;
+  }
+  .hero-stat-value { font-size: 1.5rem; font-weight: 800; color: #fff; font-family: 'Poppins', sans-serif; }
+  .hero-stat-label { font-size: .68rem; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; }
+
+  /* ── Attendance Subject Cards ──────────────────────────────────── */
+  .attend-subjects { display: flex; flex-direction: column; gap: 14px; padding: 16px 20px; }
+  .subj-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-white);
+    transition: box-shadow var(--trans), transform var(--trans);
+  }
+  .subj-row:hover { box-shadow: var(--shadow); transform: translateX(3px); }
+  .donut-wrap { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+  .donut-wrap canvas { width: 72px !important; height: 72px !important; }
+  .donut-label {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: .75rem; font-weight: 800;
+    text-align: center; line-height: 1;
+  }
+  .subj-info { flex: 1; }
+  .subj-name { font-weight: 700; font-size: .95rem; color: var(--text); }
+  .subj-meta { font-size: .78rem; color: var(--text-muted); margin-top: 3px; }
+  .subj-bar-wrap { margin-top: 8px; }
+  .subj-bar-track { height: 5px; background: var(--bg-muted); border-radius: 99px; overflow: hidden; }
+  .subj-bar-fill  { height: 100%; border-radius: 99px; transition: width 1s ease; }
+
+  /* ── Status Badges ─────────────────────────────────────────────── */
+  .status-badge {
+    font-size: .72rem; font-weight: 700;
+    padding: 4px 12px; border-radius: 99px;
+    letter-spacing: .03em; flex-shrink: 0;
+    border: 1px solid transparent;
+  }
+  .badge-eligible   { background: var(--green-bg);  color: var(--green-text);  border-color: var(--green-border); }
+  .badge-at-risk    { background: var(--amber-bg);  color: var(--amber-text);  border-color: var(--amber-border); }
+  .badge-ineligible { background: var(--red-bg);    color: var(--red-text);    border-color: var(--red-border); }
+
+  /* ── Marks Pills ───────────────────────────────────────────────── */
+  .marks-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 54px; padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-size: .8rem; font-weight: 700;
+    background: var(--blue-bg); color: var(--blue-text);
+    border: 1px solid var(--blue-border);
+  }
+  .marks-pill.avg {
+    background: var(--green-bg); color: var(--green-text);
+    border-color: var(--green-border);
+  }
+  .marks-card {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-white);
+    margin-bottom: 10px;
+    transition: box-shadow var(--trans);
+  }
+  .marks-card:hover { box-shadow: var(--shadow-sm); }
+
+  /* ── Chart Card ────────────────────────────────────────────────── */
+  .chart-container {
+    position: relative;
+    padding: 16px 20px 20px;
+    height: 200px;
+  }
+
+  /* ── Log Rows ──────────────────────────────────────────────────── */
+  .log-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--trans);
+  }
+  .log-row:last-child { border-bottom: none; }
+  .log-row:hover { background: var(--bg-subtle); }
+  .log-subj { font-size: .875rem; font-weight: 600; color: var(--text); }
+  .log-date  { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
+  .status-present { color: var(--green);  font-size: .8rem; font-weight: 700; }
+  .status-absent  { color: var(--red);    font-size: .8rem; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Hero Banner ─────────────────────────────────────────────────── -->
+<div class="student-hero">
+  <div class="hero-avatar">{{ student_name[0]|upper if student_name else '?' }}</div>
+  <div class="hero-text">
+    <div class="hero-name">{{ student_name }}</div>
+    <div class="hero-usn">USN: {{ usn }}</div>
+    <div class="hero-date">📅 {{ now }}</div>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-value">{{ attendance|length if attendance else 0 }}</div>
+      <div class="hero-stat-label">Subjects</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">
+        {% if attendance %}
+          {{ (attendance | map(attribute='pct') | list | sum / attendance|length) | round(0) | int }}%
+        {% else %}0%{% endif %}
+      </div>
+      <div class="hero-stat-label">Avg. Attendance</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">{{ marks|length if marks else 0 }}</div>
+      <div class="hero-stat-label">IA Records</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main Grid ───────────────────────────────────────────────────── -->
+<div style="display:grid; grid-template-columns: 1.4fr 1fr; gap: 20px;">
+
+  <!-- ── Left Column ─────────────────────────────────────────────── -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+
+    <!-- Attendance per Subject -->
+    <div class="card">
+      <div class="card-header">
+        📊 My Attendance
+        <span class="badge badge-blue" style="margin-left:6px;">{{ attendance|length if attendance else 0 }} subjects</span>
+      </div>
+      {% if attendance %}
+      <div class="attend-subjects">
+        {% for row in attendance %}
+        {% set pct = row.pct|round(0)|int %}
+        {% if row.status == 'Eligible' %}{% set clr = '#059669' %}{% set clr2 = '#34d399' %}
+        {% elif row.status == 'At Risk' %}{% set clr = '#d97706' %}{% set clr2 = '#fbbf24' %}
+        {% else %}{% set clr = '#dc2626' %}{% set clr2 = '#f87171' %}{% endif %}
+        <div class="subj-row">
+          <div class="donut-wrap">
+            <canvas id="donut-{{ loop.index }}"
+                    data-pct="{{ pct }}"
+                    data-clr="{{ clr }}"
+                    data-clr2="{{ clr2 }}"></canvas>
+            <div class="donut-label" style="color:{{ clr }}">{{ pct }}%</div>
+          </div>
+          <div class="subj-info">
+            <div class="subj-name">{{ row.subject }}</div>
+            <div class="subj-meta">{{ row.present }} / {{ row.total }} classes attended · Required: {{ row.threshold }}%</div>
+            <div class="subj-bar-wrap">
+              <div class="subj-bar-track">
+                <div class="subj-bar-fill" style="width:{{ pct }}%; background:{{ clr }};"></div>
+              </div>
+            </div>
+          </div>
+          <span class="status-badge badge-{{ row.status|lower|replace(' ','-') }}">{{ row.status }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p>No attendance records yet.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Recent Attendance Log -->
+    <div class="card">
+      <div class="card-header">📋 Recent Attendance Log</div>
+      {% if recent_log %}
+      <div style="max-height:320px; overflow-y:auto;">
+        {% for r in recent_log %}
+        <div class="log-row">
+          <div>
+            <div class="log-subj">{{ r.subject }}</div>
+            <div class="log-date">{{ r.date }}</div>
+          </div>
+          {% if r.status == 'Present' %}
+          <span class="status-present">✔ Present</span>
+          {% else %}
+          <span class="status-absent">✖ Absent</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state-sm">No recent records.</div>
+      {% endif %}
+    </div>
+
+  </div><!-- end left column -->
+
+  <!-- ── Right Column ────────────────────────────────────────────── -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+
+    <!-- Overall Attendance Pie Chart -->
+    <div class="card">
+      <div class="card-header">🥧 Overall Attendance Summary</div>
+      {% if attendance %}
+      <div class="chart-container">
+        <canvas id="pieChart"></canvas>
+      </div>
+      <div style="padding: 0 20px 16px; display:flex; flex-wrap:wrap; gap:8px;" id="pie-legend"></div>
+      {% else %}
+      <div class="empty-state-sm">No data to chart yet.</div>
+      {% endif %}
+    </div>
+
+    <!-- IA Marks -->
+    <div class="card">
+      <div class="card-header">📝 My IA Marks</div>
+      {% if marks %}
+      <div style="padding: 14px 16px; display:flex; flex-direction:column; gap:10px;">
+        {% for m in marks %}
+        <div class="marks-card">
+          <div style="font-weight:700; font-size:.9rem; color:var(--text); margin-bottom:8px;">{{ m.subject }}</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <span class="marks-pill">IA1: {{ m.ia1 if m.ia1 is not none else '—' }}</span>
+            <span class="marks-pill">IA2: {{ m.ia2 if m.ia2 is not none else '—' }}</span>
+            <span class="marks-pill">IA3: {{ m.ia3 if m.ia3 is not none else '—' }}</span>
+            {% if m.avg %}
+            <span class="marks-pill avg">Avg: {{ m.avg }}</span>
+            {% endif %}
+          </div>
+          {% if m.avg %}
+          <div style="margin-top:8px;">
+            <div class="subj-bar-track">
+              <div class="subj-bar-fill" style="width:{{ (m.avg / 50 * 100)|min(100) }}%;
+                   background: {% if m.avg >= 40 %}var(--green){% elif m.avg >= 25 %}var(--amber){% else %}var(--red){% endif %};"></div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p>No marks recorded yet.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div><!-- end right column -->
+
+</div><!-- end main grid -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Donut Charts ────────────────────────────────────────────────────
+document.querySelectorAll('canvas[id^="donut-"]').forEach(canvas => {
+  const pct  = parseFloat(canvas.dataset.pct) || 0;
+  const clr  = canvas.dataset.clr;
+  const clr2 = canvas.dataset.clr2;
+  new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [pct, 100 - pct],
+        backgroundColor: [clr, '#f0f2f6'],
+        borderWidth: 0,
+        borderRadius: pct < 100 ? 4 : 0,
+      }]
+    },
+    options: {
+      cutout: '72%',
+      animation: { animateRotate: true, duration: 900 },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    }
+  });
+});
+
+// ── Pie Chart — Overall Attendance ──────────────────────────────────
+const pieCanvas = document.getElementById('pieChart');
+if (pieCanvas) {
+  const subjects = [{% for row in attendance %}"{{ row.subject }}"{% if not loop.last %},{% endif %}{% endfor %}];
+  const pcts     = [{% for row in attendance %}{{ row.pct|round(1) }}{% if not loop.last %},{% endif %}{% endfor %}];
+  const colors   = [
+    '#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444',
+    '#06b6d4','#84cc16','#f97316','#ec4899','#14b8a6'
+  ];
+
+  new Chart(pieCanvas, {
+    type: 'pie',
+    data: {
+      labels: subjects,
+      datasets: [{
+        data: pcts,
+        backgroundColor: colors.slice(0, subjects.length),
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 800 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.raw}%`
+          }
+        }
+      }
+    }
+  });
+
+  // Build custom legend
+  const legend = document.getElementById('pie-legend');
+  subjects.forEach((subj, i) => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-2);font-weight:500;';
+    item.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${colors[i]};flex-shrink:0;display:inline-block;"></span>${subj}: <strong>${pcts[i]}%</strong>`;
+    legend.appendChild(item);
+  });
+}
+
+// ── Live Clock ───────────────────────────────────────────────────────
+const clk = document.getElementById('live-clock');
+if (clk) {
+  const update = () => clk.textContent = new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  update(); setInterval(update, 1000);
+}
+</script>
+{% endblock %}

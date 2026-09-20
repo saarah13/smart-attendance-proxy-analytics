@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Attendance Report — SGBIT{% endblock %}
+{% block page_title %}📊 Attendance Report{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- ── Filters ────────────────────────────────────────────────────── -->
+  <form method="GET" class="filter-bar" action="{{ url_for('attendance_report') }}">
+    <div class="filter-group">
+      <label class="form-label">Subject</label>
+      <select name="subject" class="form-select" id="filter-subject">
+        <option value="">All Subjects</option>
+        {% for s in subjects %}
+        <option value="{{ s }}" {% if s == sel_subject %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="form-label">Date</label>
+      <input type="date" name="date" class="form-input" value="{{ sel_date }}"
+             id="filter-date">
+    </div>
+    <button type="submit" class="btn btn-primary">🔍 Filter</button>
+    <a href="{{ url_for('attendance_export', subject=sel_subject, date=sel_date) }}"
+       class="btn btn-success">⬇ Export Excel</a>
+  </form>
+
+  <!-- ── Summary Badges ────────────────────────────────────────────── -->
+  {% if records %}
+  {% set present_count = records | selectattr('status', 'equalto', 'Present') | list | length %}
+  {% set absent_count  = records | length - present_count %}
+  <div class="summary-badges">
+    <span class="badge badge-blue">Total: {{ records | length }}</span>
+    <span class="badge badge-green">Present: {{ present_count }}</span>
+    <span class="badge badge-red">Absent: {{ absent_count }}</span>
+    {% if records | length > 0 %}
+    <span class="badge badge-purple">
+      {{ '%.1f%%' % (present_count / records|length * 100) }} Attendance
+    </span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── Table ─────────────────────────────────────────────────────── -->
+  <div class="table-wrap">
+    <table class="data-table" id="attendance-table">
+      <thead>
+        <tr>
+          <th>#</th><th>USN</th><th>Name</th>
+          <th>Subject</th><th>Date</th><th>Time</th>
+          <th>Status</th><th>Confidence</th><th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if records %}
+          {% for r in records %}
+          <tr class="{% if r.status == 'Absent' %}row-absent{% endif %}">
+            <td>{{ loop.index }}</td>
+            <td><code>{{ r.usn }}</code></td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.subject }}</td>
+            <td>{{ r.date }}</td>
+            <td>{{ r.timestamp.strftime('%H:%M:%S') if r.timestamp else '—' }}</td>
+            <td>
+              <span class="badge {% if r.status == 'Present' %}badge-green{% else %}badge-red{% endif %}">
+                {{ r.status }}
+              </span>
+            </td>
+            <td>{{ '%.0f%%' % (r.confidence * 100) if r.confidence else '—' }}</td>
+            <td>
+              <span class="badge badge-grey">{{ r.marked_by or 'manual' }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="9" class="empty-cell">
+              No records found. Try adjusting the filters.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Live search filter on table
+document.getElementById('filter-subject')?.addEventListener('change', function() {
+  this.form.submit();
+});
+</script>
+{% endblock %}

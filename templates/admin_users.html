@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}User Management — SGBIT{% endblock %}
+{% block page_title %}🛡️ User Management{% endblock %}
+
+{% block content %}
+<style>
+  .user-table-wrap { overflow-x:auto; }
+  .role-tag {
+    display:inline-block; padding:2px 10px; border-radius:20px;
+    font-size:.7rem; font-weight:700; letter-spacing:.4px;
+  }
+  .role-admin   { background:rgba(239,68,68,.15);  color:#f87171; border:1px solid rgba(239,68,68,.3); }
+  .role-faculty { background:rgba(99,102,241,.15); color:#a5b4fc; border:1px solid rgba(99,102,241,.3); }
+  .role-student { background:rgba(34,197,94,.15);  color:#4ade80; border:1px solid rgba(34,197,94,.3); }
+  .status-active   { color:#22c55e; font-size:.8rem; }
+  .status-inactive { color:#ef4444; font-size:.8rem; }
+  .action-row { display:flex; gap:6px; }
+</style>
+
+<div style="display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start">
+
+  <!-- ── Create User Form ───────────────────────────── -->
+  <div class="card">
+    <div class="card-header">➕ Create Faculty / Admin Account</div>
+    <form method="POST" action="{{ url_for('admin_users') }}">
+      <input type="hidden" name="action" value="create">
+      <div class="form-group">
+        <label class="form-label">Full Name *</label>
+        <input type="text" name="name" class="form-input" placeholder="Dr. Aisha Patel" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Username *</label>
+        <input type="text" name="username" class="form-input" placeholder="aisha.patel" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role *</label>
+        <select name="role" class="form-select">
+          <option value="faculty">👨‍🏫 Faculty</option>
+          <option value="admin">🛡️ Admin</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password *</label>
+        <input type="password" name="password" class="form-input" placeholder="Minimum 6 characters" required minlength="6">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+    </form>
+  </div>
+
+  <!-- ── User Tables ───────────────────────────────── -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+
+    <!-- Admins -->
+    <div class="card">
+      <div class="card-header">🛡️ Admins
+        <span class="badge badge-blue">{{ admin_users|length }}</span>
+      </div>
+      <div class="user-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Username</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
+          <tbody>
+          {% for u in admin_users %}
+          <tr>
+            <td>{{ u.name }}</td>
+            <td><code>{{ u.username }}</code></td>
+            <td>
+              {% if u.is_active %}<span class="status-active">● Active</span>
+              {% else %}<span class="status-inactive">● Inactive</span>{% endif %}
+            </td>
+            <td style="font-size:.78rem;color:var(--text-muted)">
+              {{ u.last_login.strftime('%d %b %Y %H:%M') if u.last_login else 'Never' }}
+            </td>
+            <td>
+              <div class="action-row">
+                <form method="POST" action="{{ url_for('admin_users') }}">
+                  <input type="hidden" name="action" value="{{ 'deactivate' if u.is_active else 'activate' }}">
+                  <input type="hidden" name="username" value="{{ u.username }}">
+                  <button class="btn-icon {{ 'btn-warning' if u.is_active else 'btn-success' }}"
+                          title="{{ 'Deactivate' if u.is_active else 'Activate' }}">
+                    {{ '🚫' if u.is_active else '✅' }}
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Faculty -->
+    <div class="card">
+      <div class="card-header">👨‍🏫 Faculty Accounts
+        <span class="badge badge-blue">{{ faculty_users|length }}</span>
+      </div>
+      <div class="user-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Username</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
+          <tbody>
+          {% for u in faculty_users %}
+          <tr>
+            <td>{{ u.name }}</td>
+            <td><code>{{ u.username }}</code></td>
+            <td>
+              {% if u.is_active %}<span class="status-active">● Active</span>
+              {% else %}<span class="status-inactive">● Inactive</span>{% endif %}
+            </td>
+            <td style="font-size:.78rem;color:var(--text-muted)">
+              {{ u.last_login.strftime('%d %b %Y %H:%M') if u.last_login else 'Never' }}
+            </td>
+            <td>
+              <div class="action-row">
+                <form method="POST" action="{{ url_for('admin_users') }}">
+                  <input type="hidden" name="action" value="{{ 'deactivate' if u.is_active else 'activate' }}">
+                  <input type="hidden" name="username" value="{{ u.username }}">
+                  <button class="btn-icon {{ 'btn-warning' if u.is_active else 'btn-success' }}"
+                          title="{{ 'Deactivate' if u.is_active else 'Activate' }}">
+                    {{ '🚫' if u.is_active else '✅' }}
+                  </button>
+                </form>
+                <!-- Reset Password -->
+                <button class="btn-icon btn-secondary" title="Reset Password"
+                        onclick="openReset('{{ u.username }}')">🔑</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not faculty_users %}
+          <tr><td colspan="5" class="empty-cell">No faculty accounts yet.</td></tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Students -->
+    <div class="card">
+      <div class="card-header">👤 Student Accounts
+        <span class="badge badge-blue">{{ student_users|length }}</span>
+      </div>
+      <div class="user-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>USN / Username</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+          {% for u in student_users %}
+          <tr>
+            <td>{{ u.name }}</td>
+            <td><code>{{ u.usn or u.username }}</code></td>
+            <td>
+              {% if u.is_active %}<span class="status-active">● Active</span>
+              {% else %}<span class="status-inactive">● Inactive</span>{% endif %}
+            </td>
+            <td>
+              <div class="action-row">
+                <form method="POST" action="{{ url_for('admin_users') }}">
+                  <input type="hidden" name="action" value="{{ 'deactivate' if u.is_active else 'activate' }}">
+                  <input type="hidden" name="username" value="{{ u.username }}">
+                  <button class="btn-icon {{ 'btn-warning' if u.is_active else 'btn-success' }}"
+                          title="{{ 'Deactivate' if u.is_active else 'Activate' }}">
+                    {{ '🚫' if u.is_active else '✅' }}
+                  </button>
+                </form>
+                <button class="btn-icon btn-secondary" title="Reset Password"
+                        onclick="openReset('{{ u.username }}')">🔑</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not student_users %}
+          <tr><td colspan="4" class="empty-cell">No student accounts yet. Accounts are auto-created on student registration.</td></tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="reset-modal" style="display:none;position:fixed;inset:0;
+     background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--bg-white);border:1px solid var(--border);border-radius:16px;
+              padding:28px 32px;min-width:320px;box-shadow:var(--shadow-lg)">
+    <div style="font-size:1rem;font-weight:700;margin-bottom:16px">🔑 Reset Password</div>
+    <form method="POST" action="{{ url_for('admin_users') }}">
+      <input type="hidden" name="action" value="reset_password">
+      <input type="hidden" name="username" id="reset-username">
+      <div class="form-group">
+        <label class="form-label">New Password *</label>
+        <input type="password" name="new_password" class="form-input"
+               id="reset-pwd" placeholder="New password" required minlength="6">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn btn-primary" style="flex:1">Save</button>
+        <button type="button" class="btn btn-secondary" onclick="closeReset()" style="flex:1">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openReset(username) {
+  document.getElementById('reset-username').value = username;
+  document.getElementById('reset-pwd').value = '';
+  const m = document.getElementById('reset-modal');
+  m.style.display = 'flex';
+  document.getElementById('reset-pwd').focus();
+}
+function closeReset() {
+  document.getElementById('reset-modal').style.display = 'none';
+}
+</script>
+{% endblock %}

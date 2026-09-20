@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>403 — Access Denied</title>
+  <link rel="shortcut icon" href="https://sgbit.edu.in/uploads/setting/logo_1773409861.png" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
+    .error-card {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 56px 48px;
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+    .error-icon { font-size: 4rem; margin-bottom: 16px; }
+    .error-code { font-size: 5rem; font-weight: 800; color: var(--bg-muted); font-family: 'Poppins', sans-serif; line-height: 1; margin-bottom: 8px; }
+    .error-title { font-size: 1.5rem; font-weight: 700; color: var(--text); font-family: 'Poppins', sans-serif; margin-bottom: 10px; }
+    .error-desc { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 28px; }
+  </style>
+</head>
+<body>
+  <div class="error-card">
+    <div class="error-code">403</div>
+    <div class="error-icon">🚫</div>
+    <div class="error-title">Access Denied</div>
+    <p class="error-desc">
+      You don't have permission to access this page.<br>
+      Please contact your administrator.
+    </p>
+    <a href="{{ url_for('login') }}" class="btn btn-primary">← Go to Login</a>
+  </div>
+</body>
+</html>

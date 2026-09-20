@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Email Logs — SGBIT{% endblock %}
+{% block page_title %}📧 Email Alert Logs{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    Parent Notification History
+    <span class="badge badge-blue">{{ logs | length }} records</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>#</th><th>USN</th><th>Subject</th><th>Recipient</th>
+            <th>Status</th><th>Sent At</th><th>Error</th></tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td><code>{{ log.usn }}</code></td>
+          <td>{{ log.subject }}</td>
+          <td>{{ log.recipient }}</td>
+          <td>
+            <span class="badge {% if log.status == 'sent' %}badge-green{% else %}badge-red{% endif %}">
+              {{ log.status }}
+            </span>
+          </td>
+          <td>{{ log.sent_at.strftime('%d %b %Y %H:%M') if log.sent_at else '—' }}</td>
+          <td>{{ log.error or '—' }}</td>
+        </tr>
+        {% endfor %}
+        {% if not logs %}
+        <tr>
+          <td colspan="7" class="empty-cell">No emails sent yet.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

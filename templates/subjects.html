@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Subjects — SGBIT{% endblock %}
+{% block page_title %}📚 Subject Management{% endblock %}
+
+{% block content %}
+<div class="two-col-grid">
+  <!-- ── Add Subject Form ───────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">➕ Add New Subject</div>
+    <form method="POST" action="{{ url_for('subjects') }}">
+      <input type="hidden" name="action" value="add">
+      <div class="form-group">
+        <label class="form-label">Subject Name *</label>
+        <input type="text" name="name" class="form-input"
+               placeholder="e.g. Machine Learning" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Subject Code *</label>
+          <input type="text" name="code" class="form-input"
+                 placeholder="e.g. 21CS71" style="text-transform:uppercase" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Semester *</label>
+          <select name="semester" class="form-select" required>
+            {% for s in range(1, 9) %}
+            <option value="{{ s }}" {% if s==7 %}selected{% endif %}>Semester {{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Section</label>
+          <select name="section" class="form-select">
+            <option>A</option><option>B</option><option>C</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Attendance Threshold % *</label>
+          <input type="number" name="threshold" class="form-input"
+                 value="75" min="50" max="100" required
+                 title="Minimum attendance % required for eligibility">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">➕ Add Subject</button>
+    </form>
+  </div>
+
+  <!-- ── Subject List ───────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      All Subjects
+      <span class="badge badge-blue">{{ subjects | length }}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Code</th><th>Name</th><th>Semester</th><th>Section</th><th>Threshold %</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for s in subjects %}
+          <tr>
+            <td><code>{{ s.code }}</code></td>
+            <td>{{ s.name }}</td>
+            <td>Sem {{ s.semester }}</td>
+            <td>{{ s.section }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('subjects') }}"
+                    style="display:flex;gap:6px;align-items:center">
+                <input type="hidden" name="action"   value="update_threshold">
+                <input type="hidden" name="code"     value="{{ s.code }}">
+                <input type="hidden" name="semester" value="{{ s.semester }}">
+                <input type="number" name="threshold" value="{{ s.threshold or 75 }}"
+                       min="50" max="100" style="width:62px;padding:4px 6px;
+                       border-radius:6px;background:var(--bg-white);
+                       border:1px solid var(--border-2);color:var(--text);font-size:.82rem">
+                <button type="submit" class="btn-icon" title="Save threshold" style="color:var(--green)">💾</button>
+              </form>
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('subjects') }}" style="display:inline">
+                <input type="hidden" name="action"   value="delete">
+                <input type="hidden" name="code"     value="{{ s.code }}">
+                <input type="hidden" name="semester" value="{{ s.semester }}">
+                <button type="submit" class="btn-icon btn-danger"
+                        onclick="return confirm('Delete {{ s.name }}?')">🗑</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not subjects %}
+          <tr>
+            <td colspan="5" class="empty-cell">No subjects added yet.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

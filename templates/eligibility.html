@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Eligibility — SGBIT{% endblock %}
+{% block page_title %}✅ Internal Exam Eligibility{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- ── Filter Bar ─────────────────────────────────────────────────── -->
+  <div class="filter-bar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <form method="GET" action="{{ url_for('eligibility') }}" style="display:flex;align-items:center;gap:12px;flex:1">
+      <div class="filter-group">
+        <label class="form-label">Subject</label>
+        <select name="subject" class="form-select" onchange="this.form.submit()">
+          <option value="">— Select Subject —</option>
+          {% for s in subjects %}
+          <option value="{{ s }}" {% if s == sel_subject %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+    {% if sel_subject %}
+    <a href="{{ url_for('eligibility_export', subject=sel_subject) }}" class="btn btn-success">
+      ⬇ Export Excel
+    </a>
+    <form method="POST" action="{{ url_for('send_alerts') }}">
+      <input type="hidden" name="subject" value="{{ sel_subject }}">
+      <button type="submit" class="btn btn-amber"
+              onclick="return confirm('Send email alerts to at-risk and ineligible students?')">
+        📧 Send Alerts
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if report %}
+  <!-- ── Legend ─────────────────────────────────────────────────────── -->
+  <div class="eligibility-legend">
+    <span class="elig-chip chip-green">🟢 Eligible ≥{{ report.threshold }}%</span>
+    <span class="elig-chip chip-amber">🟡 At Risk 65–{{ report.threshold - 1 }}%</span>
+    <span class="elig-chip chip-red">🔴 Ineligible &lt;65%</span>
+  </div>
+
+  <!-- ── Eligible ────────────────────────────────────────────────────── -->
+  {% if report.eligible %}
+  <div class="section-label section-green">✅ Eligible Students ({{ report.eligible|length }})</div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>#</th><th>USN</th><th>Name</th><th>Present</th><th>Total</th><th>Attendance %</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for r in report.eligible %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td><code>{{ r.usn }}</code></td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.present }}</td>
+          <td>{{ r.total }}</td>
+          <td>
+            <div class="pct-bar">
+              <div class="pct-fill pct-green" style="width:{{ r.pct }}%"></div>
+              <span>{{ '%.1f' % r.pct }}%</span>
+            </div>
+          </td>
+          <td><span class="badge badge-green">Eligible</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- ── At Risk ─────────────────────────────────────────────────────── -->
+  {% if report.at_risk %}
+  <div class="section-label section-amber">⚠️ At Risk Students ({{ report.at_risk|length }})</div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>#</th><th>USN</th><th>Name</th><th>Present</th><th>Total</th><th>Attendance %</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for r in report.at_risk %}
+        <tr class="row-warning">
+          <td>{{ loop.index }}</td>
+          <td><code>{{ r.usn }}</code></td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.present }}</td>
+          <td>{{ r.total }}</td>
+          <td>
+            <div class="pct-bar">
+              <div class="pct-fill pct-amber" style="width:{{ r.pct }}%"></div>
+              <span>{{ '%.1f' % r.pct }}%</span>
+            </div>
+          </td>
+          <td><span class="badge badge-amber">At Risk</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- ── Ineligible ──────────────────────────────────────────────────── -->
+  {% if report.ineligible %}
+  <div class="section-label section-red">🚫 Ineligible Students ({{ report.ineligible|length }})</div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>#</th><th>USN</th><th>Name</th><th>Present</th><th>Total</th><th>Attendance %</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for r in report.ineligible %}
+        <tr class="row-absent">
+          <td>{{ loop.index }}</td>
+          <td><code>{{ r.usn }}</code></td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.present }}</td>
+          <td>{{ r.total }}</td>
+          <td>
+            <div class="pct-bar">
+              <div class="pct-fill pct-red" style="width:{{ r.pct }}%"></div>
+              <span>{{ '%.1f' % r.pct }}%</span>
+            </div>
+          </td>
+          <td><span class="badge badge-red">Ineligible</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% elif sel_subject %}
+  <div class="empty-state">
+    <div class="empty-icon">📭</div>
+    <p>No attendance data found for <strong>{{ sel_subject }}</strong>.</p>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📚</div>
+    <p>Select a subject above to view eligibility.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
