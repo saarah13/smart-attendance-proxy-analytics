@@ -1,0 +1,35 @@
+# SGBIT Attendance System - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Web Framework
+flask==3.0.3
+Werkzeug==3.0.3
+
+# MongoDB Driver
+pymongo==4.7.3
+
+# Face Recognition Pipeline
+# insightface replaced by direct ONNX runtime (no C++ compilation needed)
+# Models downloaded by setup.bat from insightface model zoo (buffalo_l)
+onnxruntime>=1.16.0
+
+# Vector Search
+faiss-cpu==1.8.0
+
+# Computer Vision & ML
+opencv-python==4.10.0.84
+mediapipe==0.10.14
+numpy==1.26.4
+
+# Excel Export
+openpyxl==3.1.5
+
+# Environment & Utils
+python-dotenv==1.0.1
+
+# Authentication
+bcrypt
+
+#admin login
+# username : admin
+#password : sgbit@2026
