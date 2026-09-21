@@ -33,3 +33,5 @@ bcrypt
 #admin login
 # username : admin
 #password : sgbit@2026
+
+gunicorn
