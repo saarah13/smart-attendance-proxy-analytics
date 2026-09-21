@@ -215,4 +215,4 @@ The recipient should:
 
 ---
 
-*SGBIT CSE Department · Belagavi · July 2026*
+*SGBIT CSE Department · Belagavi · Sept 2026*
